@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zeus Card Scanner</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="splash-screen" class="view active">
+        <div class="engine-branding">
+            <h1>⚡ Powered by Zeus Engine</h1>
+            <div class="loader">Loading Database...</div>
+        </div>
+    </div>
+
+    <div id="home-screen" class="view hidden">
+        <header>
+            <h2>Zeus Collector</h2>
+        </header>
+        <div class="menu-grid">
+            <button class="menu-btn" onclick="app.showView('collection-screen')">
+                📚 My Collection
+            </button>
+            <button class="menu-btn primary" onclick="app.startScanner()">
+                📷 Scan Cards
+            </button>
+        </div>
+    </div>
+
+    <div id="scan-screen" class="view hidden">
+        <div class="camera-container">
+            <video id="camera-feed" autoplay playsinline></video>
+            <div class="target-overlay"></div>
+        </div>
+        
+        <div id="scan-ui" class="bottom-controls">
+            <button class="capture-btn" onclick="app.captureImage()"></button>
+            <button class="text-btn" onclick="app.showView('home-screen')">Cancel</button>
+        </div>
+
+        <div id="analyzing-ui" class="bottom-controls hidden">
+            <div class="scanning-animation">Analyzing Card Details...</div>
+        </div>
+
+        <div id="result-ui" class="result-modal hidden">
+            <img id="matched-card-img" src="" alt="Matched Card">
+            <div class="card-stats">
+                <h3 id="card-name">Charizard</h3>
+                <p>Value: <span id="card-value">$120.00</span></p>
+                <p>Set: <span id="card-set">Base Set</span></p>
+            </div>
+            <div class="action-row">
+                <button class="action-btn" onclick="app.addToCollection()">Add to Collection</button>
+                <button class="action-btn secondary" onclick="app.resetScanner()">Scan Another</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="collection-screen" class="view hidden">
+        <header>
+            <button class="back-btn" onclick="app.showView('home-screen')">←</button>
+            <h2>My Binders</h2>
+        </header>
+        <div class="stats-bar">
+            <div>Cards: <span id="total-cards">0</span></div>
+            <div>Value: $<span id="total-value">0.00</span></div>
+        </div>
+        <div class="binder-grid" id="binder-container">
+            </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
