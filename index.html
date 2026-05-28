@@ -6,6 +6,7 @@
     <title>Pokéscan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-slate-900 text-white overflow-hidden touch-none">
@@ -32,11 +33,14 @@
     <div id="view-scanner" class="view hidden absolute inset-0 bg-black flex-col transition-opacity duration-500">
         <div class="relative flex-1 overflow-hidden">
             <video id="camera-feed" autoplay playsinline class="absolute inset-0 w-full h-full object-cover"></video>
+            <canvas id="capture-canvas" class="hidden"></canvas>
+            
             <div class="absolute inset-8 border-2 border-white/30 rounded-xl pointer-events-none">
                 <div id="scan-line" class="hidden scan-line"></div>
             </div>
-            <div id="scanning-overlay" class="hidden absolute inset-0 bg-blue-500/20 backdrop-blur-sm flex items-center justify-center">
-                <p class="text-white font-mono text-xl animate-pulse">Analyzing Pattern...</p>
+            <div id="scanning-overlay" class="hidden absolute inset-0 bg-blue-500/40 backdrop-blur-sm flex flex-col items-center justify-center">
+                <i class="fa-solid fa-microchip text-4xl text-white mb-4 animate-bounce"></i>
+                <p id="scanning-text" class="text-white font-mono text-xl animate-pulse">Initializing Scanner...</p>
             </div>
         </div>
         <div class="h-32 bg-black flex items-center justify-between px-8 pb-6">
