@@ -20,12 +20,20 @@
     100% { top: 100%; }
 }
 
-/* View transition utilities */
+/* Hardened CSS view layout system to eliminate JS timing bugs completely */
 .view {
-    display: none;
-    opacity: 0;
+    transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+    will-change: opacity, transform;
 }
-.view.active {
-    display: flex;
-    opacity: 1;
+
+.hidden-view {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: scale(0.95);
+}
+
+.active-view {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: scale(1);
 }
