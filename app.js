@@ -3,17 +3,22 @@ let currentCardData = null;
 let collection = {}; 
 let cameraStream = null;
 
-// --- View Navigation ---
+// --- Bulletproof View Navigation ---
 function navigateTo(viewId) {
+    // Forcefully reset every view state cleanly using class configurations
     document.querySelectorAll('.view').forEach(el => {
-        el.classList.remove('active');
-        setTimeout(() => el.style.display = 'none', 300); 
+        el.classList.remove('active-view');
+        el.classList.add('hidden-view');
     });
 
+    // Make target view instantly active
     const target = document.getElementById(`view-${viewId}`);
-    target.style.display = 'flex';
-    setTimeout(() => target.classList.add('active'), 50);
+    if (target) {
+        target.classList.remove('hidden-view');
+        target.classList.add('active-view');
+    }
 
+    // Camera hardware management
     if (viewId === 'scanner') {
         startCamera();
     } else {
@@ -25,13 +30,14 @@ function navigateTo(viewId) {
     }
 }
 
+// App initial setup
 window.onload = () => {
     setTimeout(() => {
         navigateTo('home');
     }, 2500);
 };
 
-// --- Camera Logic ---
+// --- Camera Access ---
 async function startCamera() {
     const video = document.getElementById('camera-feed');
     try {
@@ -41,7 +47,7 @@ async function startCamera() {
         video.srcObject = cameraStream;
     } catch (err) {
         console.error("Camera access denied or unavailable", err);
-        alert("Please allow camera access in your browser settings to scan cards.");
+        alert("Please allow camera access in your mobile browser settings to scan cards.");
     }
 }
 
@@ -52,7 +58,7 @@ function stopCamera() {
     }
 }
 
-// --- Smart Scanning via Tesseract.js ---
+// --- OCR Pattern Analysis via Tesseract.js ---
 async function captureAndAnalyze() {
     const btn = document.getElementById('capture-btn');
     const scanLine = document.getElementById('scan-line');
@@ -61,34 +67,33 @@ async function captureAndAnalyze() {
     const video = document.getElementById('camera-feed');
     const canvas = document.getElementById('capture-canvas');
 
-    // UI Lockout & Feedback
     btn.disabled = true;
     scanLine.classList.remove('hidden');
     overlay.classList.remove('hidden');
-    statusText.innerText = 'Extracting Card Data... (This may take a moment on first run)';
+    statusText.innerText = 'Extracting Card Data...';
 
     try {
-        // Capture frame to canvas
+        // Freeze frame to internal canvas rendering context
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Run OCR
+        // Run local canvas processing via Tesseract CDN workers
         const result = await Tesseract.recognize(canvas, 'eng');
         const scannedText = result.data.text;
         
-        // Clean text to find the most likely Pokémon name (first word > 3 letters)
+        // Isolate primary text blocks matching title layouts
         const words = scannedText.split(/\s+/)
             .map(w => w.replace(/[^a-zA-Z]/g, ''))
             .filter(w => w.length > 3);
 
-        if (words.length === 0) throw new Error("No text found.");
+        if (words.length === 0) throw new Error("No characters found.");
         
         const searchName = words[0]; 
         statusText.innerText = `Searching Database for: ${searchName}...`;
 
-        // Query Pokémon TCG API
+        // Run dynamic query to external TCG platform endpoints
         const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:${searchName}*&pageSize=1`);
         const data = await response.json();
         
@@ -97,20 +102,19 @@ async function captureAndAnalyze() {
             populateResultScreen(currentCardData);
             navigateTo('result');
         } else {
-            alert(`Couldn't find official data for "${searchName}". Try adjusting the lighting and scan again.`);
+            alert(`Couldn't find official data for "${searchName}". Adjust placement and retry.`);
         }
     } catch (error) {
-        console.error("Scan Failed:", error);
-        alert("Failed to read the card clearly. Hold steady, ensure good lighting, and try again.");
+        console.error("Scan Process Faulted:", error);
+        alert("Failed to read text. Ensure card is upright, centered, and fully lit.");
     }
 
-    // Reset UI state for next scan attempt
     btn.disabled = false;
     scanLine.classList.add('hidden');
     overlay.classList.add('hidden');
 }
 
-// --- Result Screen Rendering ---
+// --- Result Processing Engine ---
 function populateResultScreen(card) {
     const img = document.getElementById('result-image');
     img.src = card.images.large;
@@ -125,7 +129,7 @@ function populateResultScreen(card) {
     document.getElementById('result-value').textContent = price !== 'N/A' ? `$${price}` : 'N/A';
 }
 
-// --- Binder Storage Logic ---
+// --- Storage & Album Partitioning ---
 function addToCollection() {
     if (!currentCardData) return;
     
