@@ -1,23 +1,19 @@
 // --- State Management ---
 let currentCardData = null;
-let collection = {}; // Object to store cards by Set name
+let collection = {}; 
 let cameraStream = null;
 
 // --- View Navigation ---
 function navigateTo(viewId) {
-    // Hide all views
     document.querySelectorAll('.view').forEach(el => {
         el.classList.remove('active');
-        setTimeout(() => el.style.display = 'none', 300); // Wait for fade out
+        setTimeout(() => el.style.display = 'none', 300); 
     });
 
-    // Show target view
     const target = document.getElementById(`view-${viewId}`);
     target.style.display = 'flex';
-    // Small timeout ensures display:flex applies before opacity transitions
     setTimeout(() => target.classList.add('active'), 50);
 
-    // Handle Camera Lifecycle
     if (viewId === 'scanner') {
         startCamera();
     } else {
@@ -29,9 +25,7 @@ function navigateTo(viewId) {
     }
 }
 
-// --- App Boot Sequence ---
 window.onload = () => {
-    // Show intro for 2.5 seconds, then go home
     setTimeout(() => {
         navigateTo('home');
     }, 2500);
@@ -47,7 +41,7 @@ async function startCamera() {
         video.srcObject = cameraStream;
     } catch (err) {
         console.error("Camera access denied or unavailable", err);
-        alert("Please allow camera access to scan cards.");
+        alert("Please allow camera access in your browser settings to scan cards.");
     }
 }
 
@@ -58,46 +52,68 @@ function stopCamera() {
     }
 }
 
-// --- Scanning & API Logic ---
+// --- Smart Scanning via Tesseract.js ---
 async function captureAndAnalyze() {
     const btn = document.getElementById('capture-btn');
     const scanLine = document.getElementById('scan-line');
     const overlay = document.getElementById('scanning-overlay');
+    const statusText = document.getElementById('scanning-text');
+    const video = document.getElementById('camera-feed');
+    const canvas = document.getElementById('capture-canvas');
 
-    // UI Feedback
+    // UI Lockout & Feedback
     btn.disabled = true;
     scanLine.classList.remove('hidden');
     overlay.classList.remove('hidden');
+    statusText.innerText = 'Extracting Card Data... (This may take a moment on first run)';
 
-    // Fake analyzing time for UX (2 seconds)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Fetch from TCG API (Mocking "Charizard" detection)
     try {
-        const response = await fetch('https://api.pokemontcg.io/v2/cards?q=name:charizard&pageSize=1');
+        // Capture frame to canvas
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Run OCR
+        const result = await Tesseract.recognize(canvas, 'eng');
+        const scannedText = result.data.text;
+        
+        // Clean text to find the most likely Pokémon name (first word > 3 letters)
+        const words = scannedText.split(/\s+/)
+            .map(w => w.replace(/[^a-zA-Z]/g, ''))
+            .filter(w => w.length > 3);
+
+        if (words.length === 0) throw new Error("No text found.");
+        
+        const searchName = words[0]; 
+        statusText.innerText = `Searching Database for: ${searchName}...`;
+
+        // Query Pokémon TCG API
+        const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:${searchName}*&pageSize=1`);
         const data = await response.json();
         
-        if (data.data.length > 0) {
+        if (data.data && data.data.length > 0) {
             currentCardData = data.data[0];
             populateResultScreen(currentCardData);
             navigateTo('result');
+        } else {
+            alert(`Couldn't find official data for "${searchName}". Try adjusting the lighting and scan again.`);
         }
     } catch (error) {
-        console.error("API Fetch Failed", error);
-        alert("Failed to analyze card. Check internet connection.");
+        console.error("Scan Failed:", error);
+        alert("Failed to read the card clearly. Hold steady, ensure good lighting, and try again.");
     }
 
-    // Reset UI
+    // Reset UI state for next scan attempt
     btn.disabled = false;
     scanLine.classList.add('hidden');
     overlay.classList.add('hidden');
 }
 
-// --- Result Screen Population ---
+// --- Result Screen Rendering ---
 function populateResultScreen(card) {
     const img = document.getElementById('result-image');
     img.src = card.images.large;
-    // Pop animation trigger
     img.classList.remove('scale-100');
     setTimeout(() => img.classList.add('scale-100'), 100);
 
@@ -109,13 +125,11 @@ function populateResultScreen(card) {
     document.getElementById('result-value').textContent = price !== 'N/A' ? `$${price}` : 'N/A';
 }
 
-// --- Binder/Collection Logic ---
+// --- Binder Storage Logic ---
 function addToCollection() {
     if (!currentCardData) return;
     
     const setName = currentCardData.set.name;
-    
-    // Create the binder for this set if it doesn't exist
     if (!collection[setName]) {
         collection[setName] = [];
     }
@@ -140,13 +154,10 @@ function renderCollection() {
                 <h3 class="text-lg text-white font-semibold mb-4 border-b border-white/10 pb-2">${setName}</h3>
                 <div class="grid grid-cols-3 gap-3">
         `;
-        
         collection[setName].forEach(card => {
             html += `<img src="${card.images.small}" alt="${card.name}" class="w-full h-auto rounded-lg shadow-md">`;
         });
-
         html += `</div></div>`;
     });
-
     grid.innerHTML = html;
 }
